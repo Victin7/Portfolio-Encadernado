@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*{box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}</style>
+<title>Portfólio em Wire-o</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: palco 3D em tela cheia; ficha técnica no topo, controles de folhear na base */
+:root {
+  --bg: #e7e3dc;        /* parede clara, papel kraft frio */
+  --ink: #1f2226;
+  --muted: #5d636b;
+  --panel: rgba(250, 248, 244, 0.86);
+  --line: rgba(31, 34, 38, 0.14);
+  --accent: #2f5d62;    /* verde-petróleo, cor da capa institucional */
+  --accent-ink: #f4f7f6;
+  --font-ui: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --ink: #e9e6e0; --muted: #9aa0a8; --panel: rgba(24, 27, 31, 0.84);
+    --line: rgba(233, 230, 224, 0.14); --accent: #7fb3b0; --accent-ink: #0f1a1a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --ink: #e9e6e0; --muted: #9aa0a8; --panel: rgba(24, 27, 31, 0.84);
+  --line: rgba(233, 230, 224, 0.14); --accent: #7fb3b0; --accent-ink: #0f1a1a; color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui);
+  overflow: hidden; position: relative;
+}
+#stage { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+.top, .bottom {
+  position: fixed; left: 0; right: 0; z-index: 2; pointer-events: none;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top { top: 0; padding-block: calc(14px + env(safe-area-inset-top, 0px)) 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.bottom { bottom: 0; padding-block: 0 calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: center; }
+.card {
+  pointer-events: auto; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.title { padding: 10px 14px; min-width: 0; }
+.title h1 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.01em; text-wrap: balance; }
+.title p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+.spec { padding: 10px 12px; font-family: var(--font-data); font-size: 11px; color: var(--muted); display: grid; grid-template-columns: auto auto; gap: 3px 12px; max-width: 100%; }
+.spec .head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
+.spec .head button { font: 500 11px var(--font-ui); letter-spacing: 0; text-transform: none; min-height: 28px; padding: 3px 10px; }
+.spec.collapsed { gap: 0; }
+.spec.collapsed > :not(.head) { display: none; }
+.spec.collapsed .head { margin-bottom: 0; }
+.spec b { color: var(--ink); font-weight: 500; }
+.swatches { grid-column: 1 / -1; display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.swatches button { font: 500 11px var(--font-ui); min-height: 30px; padding: 4px 10px 4px 6px; display: inline-flex; align-items: center; gap: 6px; }
+.swatches button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line); display: inline-block; }
+.spec b { color: var(--ink); font-weight: 500; }
+.controls { display: flex; align-items: center; gap: 6px; padding: 6px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+button {
+  font: 500 13px var(--font-ui); color: var(--ink); background: transparent;
+  border: 1px solid var(--line); border-radius: 7px; padding: 8px 12px; cursor: pointer; min-height: 36px;
+}
+button:hover { background: var(--line); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+button.primary:hover { filter: brightness(1.08); }
+button:disabled { opacity: 0.35; cursor: default; }
+.counter { font-family: var(--font-data); font-size: 12px; min-width: 11.5em; text-align: center; font-variant-numeric: tabular-nums; padding: 0 4px; }
+.counter small { display: block; color: var(--muted); font-size: 10.5px; }
+.hint { position: fixed; z-index: 2; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); font-size: 11px; color: var(--muted); pointer-events: none; }
+.loading { position: fixed; inset: 0; display: grid; place-items: center; font-family: var(--font-data); font-size: 12px; color: var(--muted); z-index: 1; }
+@media (max-width: 560px) {
+  .top { flex-direction: column; align-items: stretch; gap: 8px; }
+  .spec { font-size: 10.5px; padding: 8px 10px; }
+  .hint { display: none; }
+  button { padding: 8px 10px; }
+  .counter { min-width: 9.5em; }
+}
+</style>
+</head>
+<body>
+
+
+<canvas id="stage" aria-label="Simulação 3D do portfólio encadernado"></canvas>
+<div class="loading" id="loading">Montando o caderno…</div>
+
+<header class="top">
+  <div class="card title">
+    <h1>Portfólio de Carreira · Victor Sousa dos Anjos</h1>
+    <p>Modelo de encadernação para a gráfica · conteúdo desfocado</p>
+  </div>
+  <div class="card spec" id="spec" aria-label="Especificação do pedido">
+    <div class="head"><span>Pedido</span><button type="button" id="toggleSpec" aria-expanded="true" aria-controls="spec">Ocultar</button></div>
+    <span>Quantidade</span><b>1 unidade</b>
+    <span>Papel</span><b>A4 · 75 g/m² · só frente</b>
+    <span>Impressão</span><b>colorida</b>
+    <span>Folhas</span><b>38</b>
+    <span>Encadernação</span><b>wire-o 3:1 · 5/16" (7,9 mm)</b>
+    <span>Cor do wire</span><b id="wireName">preto</b>
+    <span>Capa</span><b>acetato transparente</b>
+    <span>Contracapa</span><b>PP preto fosco</b>
+    <div class="swatches" role="group" aria-label="Cor do wire">
+      <button type="button" data-wire="preto" aria-pressed="true"><span class="dot" style="background:#1b1c1e"></span>Preto</button>
+      <button type="button" data-wire="prata" aria-pressed="false"><span class="dot" style="background:#c9ccd1"></span>Prata</button>
+      <button type="button" data-wire="branco" aria-pressed="false"><span class="dot" style="background:#f2f2f0"></span>Branco</button>
+    </div>
+  </div>
+</header>
+
+<div class="hint">Arraste para girar · role ou pince para aproximar</div>
+
+<nav class="bottom" aria-label="Folhear">
+  <div class="card controls">
+    <button id="first" title="Fechar na capa">Capa</button>
+    <button id="prev" aria-label="Folha anterior">‹ Voltar</button>
+    <div class="counter" id="counter" aria-live="polite">Capa transparente<small>fechado</small></div>
+    <button id="next" class="primary" aria-label="Próxima folha">Virar ›</button>
+    <button id="last" title="Ver a contracapa">Verso</button>
+  </div>
+</nav>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script>window.PAGES = ["pages/p01.jpg", "pages/p02.jpg", "pages/p03.jpg", "pages/p04.jpg", "pages/p05.jpg", "pages/p06.jpg", "pages/p07.jpg", "pages/p08.jpg", "pages/p09.jpg", "pages/p10.jpg", "pages/p11.jpg", "pages/p12.jpg", "pages/p13.jpg", "pages/p14.jpg", "pages/p15.jpg", "pages/p16.jpg", "pages/p17.jpg", "pages/p18.jpg", "pages/p19.jpg", "pages/p20.jpg", "pages/p21.jpg", "pages/p22.jpg", "pages/p23.jpg", "pages/p24.jpg", "pages/p25.jpg", "pages/p26.jpg", "pages/p27.jpg", "pages/p28.jpg", "pages/p29.jpg", "pages/p30.jpg", "pages/p31.jpg", "pages/p32.jpg", "pages/p33.jpg", "pages/p34.jpg", "pages/p35.jpg", "pages/p36.jpg", "pages/p37.jpg", "pages/p38.jpg"];</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const PAGES = window.PAGES;
+const N = PAGES.length;              // 35 folhas impressas
+const W = 21, H = 29.7;              // A4 em cm
+const EDGE = 0.12;                   // distância do eixo do espiral até a borda do papel
+const HOLE_X = 0.6, HOLE_R = 0.2;    // furos a 6 mm da borda
+const PITCH = 0.847;                 // passo 3:1 (8,47 mm)
+const PAPER = 0.011, COVER = 0.08, ACETATE = 0.03;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const canvas = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+function themeBg() {
+  const c = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#e7e3dc";
+  scene.background = new THREE.Color(c);
+  scene.fog = new THREE.Fog(scene.background, 140, 260);
+}
+themeBg();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeBg);
+new MutationObserver(themeBg).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 600);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.47;
+controls.minDistance = 18;
+controls.maxDistance = 140;
+controls.enablePan = false;
+
+// Luzes
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7f72, 0.55));
+const sun = new THREE.DirectionalLight(0xfff4e6, 1.6);
+sun.position.set(-18, 46, 22);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35, near: 1, far: 120 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+scene.add(sun);
+
+// Pilha: contracapa embaixo, folhas, acetato por cima
+const stackTop = COVER + N * PAPER + ACETATE;
+const yc = stackTop / 2;             // eixo do espiral passa pelo meio da pilha
+const RING = 0.395;                   // wire 5/16" (7,9 mm de diâmetro)
+const tableY = yc - RING + 0.03;
+const CX = EDGE + HOLE_X - RING;      // eixo do wire-o (centro das argolas)
+const LE = EDGE - CX;                 // borda do papel em coordenadas do eixo
+
+// Mesa: tampo de madeira gerado em canvas
+function woodTexture() {
+  const c = document.createElement("canvas"); c.width = 1024; c.height = 1024;
+  const g = c.getContext("2d");
+  g.fillStyle = "#8a6446"; g.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 260; i++) {
+    const y = Math.random() * 1024, a = 0.03 + Math.random() * 0.07;
+    g.strokeStyle = Math.random() < 0.5 ? `rgba(60,36,20,${a})` : `rgba(190,150,110,${a})`;
+    g.lineWidth = 1 + Math.random() * 3;
+    g.beginPath();
+    for (let x = 0; x <= 1024; x += 32) g.lineTo(x, y + Math.sin(x / 140 + i) * 6 + Math.sin(x / 37 + i * 3) * 1.5);
+    g.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+const table = new THREE.Mesh(new THREE.PlaneGeometry(240, 240),
+  new THREE.MeshStandardMaterial({ map: woodTexture(), roughness: 0.62, metalness: 0 }));
+table.rotation.x = -Math.PI / 2; table.position.y = tableY; table.receiveShadow = true;
+scene.add(table);
+
+// Furos
+const holeZs = [];
+for (let z = -H / 2 + 0.75; z <= H / 2 - 0.7; z += PITCH) holeZs.push(z);
+function punch(g, cw, ch) {
+  g.globalCompositeOperation = "destination-out";
+  for (const z of holeZs) {
+    const px = (HOLE_X / W) * cw, py = ((z + H / 2) / H) * ch;
+    g.beginPath(); g.arc(px, py, (HOLE_R / W) * cw, 0, Math.PI * 2); g.fill();
+  }
+  g.globalCompositeOperation = "source-over";
+}
+// máscara alfa (branco = papel, preto = furo) para o verso das folhas e as capas
+const maskCanvas = document.createElement("canvas"); maskCanvas.width = 512; maskCanvas.height = 724;
+{ const g = maskCanvas.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, 512, 724); g.fillStyle = "#000";
+  for (const z of holeZs) { g.beginPath(); g.arc((HOLE_X / W) * 512, ((z + H / 2) / H) * 724, (HOLE_R / W) * 512, 0, Math.PI * 2); g.fill(); } }
+const holeMask = new THREE.CanvasTexture(maskCanvas);
+
+// Geometria de folha flexível
+const SEG = 28;
+function sheetGeometry(yoff) {
+  const geo = new THREE.PlaneGeometry(W, H, SEG, 1);
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(LE + W / 2, yoff, 0);
+  geo.userData.base = geo.attributes.position.array.slice();
+  geo.userData.yoff = yoff;
+  return geo;
+}
+function bend(geo, amount) {
+  const base = geo.userData.base, pos = geo.attributes.position.array, yoff = geo.userData.yoff;
+  for (let i = 0; i < pos.length; i += 3) {
+    const dx = base[i] - LE;
+    const b = amount * Math.pow(dx / W, 1.6);
+    pos[i] = LE + dx * Math.cos(b);
+    pos[i + 1] = yoff - dx * Math.sin(b);
+    pos[i + 2] = base[i + 2];
+  }
+  geo.attributes.position.needsUpdate = true;
+  geo.computeVertexNormals();
+}
+
+const sheets = [];   // ordem de virada: acetato, folhas 1..N, contracapa
+const paperBack = new THREE.MeshStandardMaterial({ color: 0xf7f6f2, roughness: 0.92, alphaMap: holeMask, alphaTest: 0.5, side: THREE.BackSide });
+
+function makeSheet(yk, frontMat, backMat, opts = {}) {
+  const pivot = new THREE.Group();
+  pivot.position.set(CX, yc, 0);
+  const geo = sheetGeometry(yk - yc);
+  const front = new THREE.Mesh(geo, frontMat);
+  front.castShadow = !opts.noShadow; front.receiveShadow = true;
+  pivot.add(front);
+  if (backMat) { const back = new THREE.Mesh(geo, backMat); back.castShadow = !opts.noShadow; back.receiveShadow = true; pivot.add(back); }
+  scene.add(pivot);
+  const s = { pivot, geo, angle: 0, target: 0, dir: 1, flexible: opts.flexible !== false };
+  sheets.push(s);
+  return s;
+}
+
+// Acetato (capa transparente)
+const acetateMat = new THREE.MeshPhysicalMaterial({
+  color: 0xe9f1f4, transparent: true, opacity: 0.16, roughness: 0.04, metalness: 0,
+  clearcoat: 1, clearcoatRoughness: 0.03, side: THREE.DoubleSide, depthWrite: false,
+  alphaMap: holeMask
+});
+makeSheet(stackTop - ACETATE / 2, acetateMat, null, { noShadow: true });
+
+// Folhas impressas
+const loader = new THREE.TextureLoader();
+const aniso = renderer.capabilities.getMaxAnisotropy();
+let loaded = 0;
+PAGES.forEach((src, i) => {
+  const yk = COVER + (N - i - 0.5) * PAPER;
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, alphaTest: 0.5, side: THREE.FrontSide });
+  makeSheet(yk, mat, paperBack);
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas"); c.width = img.width; c.height = img.height;
+    const g = c.getContext("2d"); g.drawImage(img, 0, 0); punch(g, c.width, c.height);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso;
+    mat.map = t; mat.needsUpdate = true;
+    if (++loaded === N) document.getElementById("loading").hidden = true;
+  };
+  img.src = src;
+});
+
+// Contracapa preta (polipropileno fosco), também vira para mostrar o verso
+{
+  const pivot = new THREE.Group(); pivot.position.set(CX, yc, 0);
+  const cover = new THREE.Mesh(new THREE.BoxGeometry(W, COVER, H),
+    new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.55, metalness: 0.05, alphaMap: holeMask, alphaTest: 0.5 }));
+  cover.position.set(LE + W / 2, COVER / 2 - yc, 0);
+  cover.castShadow = cover.receiveShadow = true;
+  pivot.add(cover); scene.add(pivot);
+  sheets.push({ pivot, geo: null, angle: 0, target: 0, dir: 1, flexible: false });
+}
+
+// Wire-o: em cada furo passam duas argolas paralelas, ligadas pelo dorso
+const WIRES = {
+  preto:  { color: 0x1b1c1e, roughness: 0.35, metalness: 0.7 },
+  prata:  { color: 0xc9ccd1, roughness: 0.22, metalness: 1.0 },
+  branco: { color: 0xf2f2f0, roughness: 0.4, metalness: 0.15 }
+};
+const ringMat = new THREE.MeshStandardMaterial(WIRES.preto);
+const WR = 0.032, GAP = 0.13;                       // fio de ~0,6 mm, argolas a 1,3 mm uma da outra
+const loopGeo = new THREE.TorusGeometry(RING, WR, 10, 56, Math.PI * 1.92);
+const backX = CX - RING;                            // dorso, lado de fora do caderno
+const add = m => { m.castShadow = true; scene.add(m); };
+holeZs.forEach((z, i) => {
+  for (const dz of [-GAP, GAP]) {
+    const r = new THREE.Mesh(loopGeo, ringMat);
+    r.position.set(CX, yc, z + dz);
+    r.rotation.z = Math.PI + Math.PI * 0.04;        // a pequena abertura fica no dorso, onde o fio segue para o próximo furo
+    add(r);
+  }
+  // fio que liga as duas argolas deste furo (fecho da "grampo")
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, GAP * 2, 8), ringMat);
+  cap.rotation.x = Math.PI / 2; cap.position.set(backX, yc, z); add(cap);
+  // fio do dorso até o próximo furo
+  if (i < holeZs.length - 1) {
+    const len = holeZs[i + 1] - z - GAP * 2;
+    const run = new THREE.Mesh(new THREE.CylinderGeometry(WR, WR, len, 8), ringMat);
+    run.rotation.x = Math.PI / 2; run.position.set(backX - WR * 2.2, yc, z + GAP + len / 2); add(run);
+  }
+});
+{
+  const spec = document.getElementById("spec"), t = document.getElementById("toggleSpec");
+  t.addEventListener("click", () => {
+    const hide = !spec.classList.contains("collapsed");
+    spec.classList.toggle("collapsed", hide);
+    t.textContent = hide ? "Mostrar" : "Ocultar";
+    t.setAttribute("aria-expanded", String(!hide));
+  });
+}
+document.querySelectorAll("[data-wire]").forEach(b => b.addEventListener("click", () => {
+  const k = b.dataset.wire;
+  ringMat.color.setHex(WIRES[k].color); ringMat.roughness = WIRES[k].roughness; ringMat.metalness = WIRES[k].metalness;
+  document.getElementById("wireName").textContent = k;
+  document.querySelectorAll("[data-wire]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+}));
+
+// Estado de folheio
+let current = 0;                       // quantas folhas já foram viradas
+const TOTAL = sheets.length;           // acetato + folhas + contracapa
+const counter = document.getElementById("counter");
+const btn = id => document.getElementById(id);
+
+function label() {
+  if (current === 0) return ["Capa transparente", "fechado"];
+  if (current <= N) return [`Página ${current} de ${N}`, current === 1 ? "capa impressa" : current === 2 ? "folha de rosto" : current === 3 ? "sumário" : "aberto"];
+  if (current === N + 1) return ["Contracapa", "lado de dentro"];
+  return ["Contracapa", "fechado, visto por trás"];
+}
+function sync() {
+  const [a, b] = label();
+  counter.innerHTML = `${a}<small>${b}</small>`;
+  btn("prev").disabled = btn("first").disabled = current === 0;
+  btn("next").disabled = btn("last").disabled = current === TOTAL;
+  sheets.forEach((s, i) => { const t = i < current ? Math.PI : 0; if (s.target !== t) { s.dir = t > s.target ? 1 : -1; s.target = t; } });
+}
+function go(n) { current = Math.max(0, Math.min(TOTAL, n)); sync(); }
+btn("next").onclick = () => go(current + 1);
+btn("prev").onclick = () => go(current - 1);
+btn("first").onclick = () => go(0);
+btn("last").onclick = () => go(TOTAL);
+addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === "PageDown") go(current + 1);
+  if (e.key === "ArrowLeft" || e.key === "PageUp") go(current - 1);
+  if (e.key === "Home") go(0);
+  if (e.key === "End") go(TOTAL);
+});
+
+// Clique sem arrastar: lado direito vira, lado esquerdo volta
+let down = null;
+canvas.addEventListener("pointerdown", e => { down = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener("pointerup", e => {
+  if (!down) return;
+  const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+  down = null;
+  if (moved > 6) return;
+  const ndc = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  const ray = new THREE.Raycaster(); ray.setFromCamera(ndc, camera);
+  const p = new THREE.Vector3();
+  if (ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -yc), p)) go(current + (p.x >= CX ? 1 : -1));
+});
+
+// Câmera: centraliza o que está visível (caderno fechado à direita, aberto no meio)
+const look = new THREE.Vector3();
+function framing() {
+  const open = current > 0 && current < TOTAL;
+  const x = open ? 0 : current === 0 ? W / 2 + EDGE : -(W / 2 + EDGE);
+  return { x, span: open ? 2 * W + 4 : W + 6 };
+}
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+{
+  const f = framing();
+  look.set(f.x, 0, 1.2); controls.target.copy(look);
+  const fitH = (H + 6) / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const fitW = f.span / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / camera.aspect;
+  const d = Math.max(fitH, fitW) * 1.05;
+  camera.position.set(f.x + d * 0.05, d * 0.86, d * 0.52);
+}
+
+// Animação
+const clock = new THREE.Clock();
+const SPEED = reduce ? 40 : 3.6;   // rad/s
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  for (const s of sheets) {
+    if (s.angle !== s.target) {
+      const step = SPEED * dt * (0.55 + 0.9 * Math.sin(Math.max(0.15, Math.min(Math.PI - 0.15, s.angle))));
+      s.angle = s.target > s.angle ? Math.min(s.target, s.angle + step) : Math.max(s.target, s.angle - step);
+    }
+    s.pivot.rotation.z = s.angle;
+    if (s.flexible && s.geo) {
+      const t = s.angle / Math.PI;
+      const amt = s.angle === s.target ? 0 : s.dir * 0.85 * Math.sin(Math.PI * t);
+      if (amt !== 0 || s._bent) { bend(s.geo, amt); s._bent = amt !== 0; }
+    }
+  }
+  // acompanha o enquadramento suavemente
+  const f = framing();
+  const goal = new THREE.Vector3(f.x, 0, 1.2);
+  const delta = goal.clone().sub(controls.target).multiplyScalar(reduce ? 1 : 0.06);
+  controls.target.add(delta);
+  camera.position.add(delta);
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+sync();
+tick();
+</script>
+
+</body>
+</html>
