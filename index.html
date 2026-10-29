@@ -128,17 +128,19 @@ button:disabled { opacity: 0.35; cursor: default; }
   </div>
 </nav>
 
-<script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-} }
+<script>
+window.__fail = function (msg) {
+  var el = document.getElementById("loading");
+  if (el) { el.hidden = false; el.innerHTML = '<div style="max-width:30em;text-align:center;line-height:1.5;padding:0 16px">Não foi possível abrir o 3D neste aparelho.<br>Tente pelo Chrome atualizado ou por um computador.<br><small style="opacity:.7">' + msg + '</small></div>'; }
+};
+window.addEventListener("error", function (e) { window.__fail(e.message || "erro ao carregar"); });
+setTimeout(function () { var el = document.getElementById("loading"); if (el && !el.hidden && !window.__ok) window.__fail("tempo esgotado ao carregar"); }, 25000);
 </script>
 <script>window.PAGES = ["paginas/p01.jpg", "paginas/p02.jpg", "paginas/p03.jpg", "paginas/p04.jpg", "paginas/p05.jpg", "paginas/p06.jpg", "paginas/p07.jpg", "paginas/p08.jpg", "paginas/p09.jpg", "paginas/p10.jpg", "paginas/p11.jpg", "paginas/p12.jpg", "paginas/p13.jpg", "paginas/p14.jpg", "paginas/p15.jpg", "paginas/p16.jpg", "paginas/p17.jpg", "paginas/p18.jpg", "paginas/p19.jpg", "paginas/p20.jpg", "paginas/p21.jpg", "paginas/p22.jpg", "paginas/p23.jpg", "paginas/p24.jpg", "paginas/p25.jpg", "paginas/p26.jpg", "paginas/p27.jpg", "paginas/p28.jpg", "paginas/p29.jpg", "paginas/p30.jpg", "paginas/p31.jpg", "paginas/p32.jpg", "paginas/p33.jpg", "paginas/p34.jpg", "paginas/p35.jpg", "paginas/p36.jpg", "paginas/p37.jpg", "paginas/p38.jpg"];</script>
 <script type="module">
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/+esm";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js/+esm";
+import { RoomEnvironment } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/environments/RoomEnvironment.js/+esm";
 
 const PAGES = window.PAGES;
 const N = PAGES.length;              // 35 folhas impressas
@@ -151,7 +153,8 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const canvas = document.getElementById("stage");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const MOBILE = matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 820;
+renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.5 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
@@ -185,7 +188,7 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7f72, 0.55));
 const sun = new THREE.DirectionalLight(0xfff4e6, 1.6);
 sun.position.set(-18, 46, 22);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
 Object.assign(sun.shadow.camera, { left: -35, right: 35, top: 35, bottom: -35, near: 1, far: 120 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.02;
@@ -287,25 +290,50 @@ const acetateMat = new THREE.MeshPhysicalMaterial({
 });
 makeSheet(stackTop - ACETATE / 2, acetateMat, null, { noShadow: true });
 
-// Folhas impressas
-const loader = new THREE.TextureLoader();
-const aniso = renderer.capabilities.getMaxAnisotropy();
+// Folhas impressas: versão leve em todas, versão nítida só perto da página aberta
+const aniso = Math.min(renderer.capabilities.getMaxAnisotropy(), MOBILE ? 4 : 8);
+const pageMats = [], hiState = [];
 let loaded = 0;
-PAGES.forEach((src, i) => {
-  const yk = COVER + (N - i - 0.5) * PAPER;
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, alphaTest: 0.5, side: THREE.FrontSide });
-  makeSheet(yk, mat, paperBack);
+function makeTex(src, done) {
   const img = new Image();
   img.onload = () => {
     const c = document.createElement("canvas"); c.width = img.width; c.height = img.height;
     const g = c.getContext("2d"); g.drawImage(img, 0, 0); punch(g, c.width, c.height);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso;
-    mat.map = t; mat.needsUpdate = true;
-    if (++loaded === N) document.getElementById("loading").hidden = true;
+    done(t);
   };
+  img.onerror = () => window.__fail("não carregou " + src);
   img.src = src;
+}
+PAGES.forEach((src, i) => {
+  const yk = COVER + (N - i - 0.5) * PAPER;
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, alphaTest: 0.5, side: THREE.FrontSide });
+  makeSheet(yk, mat, paperBack);
+  pageMats.push(mat); hiState.push(null);
+  makeTex(src.replace("paginas/", "paginas-m/"), t => {
+    mat.userData.lo = t; if (!hiState[i] || hiState[i] === "loading") { mat.map = t; mat.needsUpdate = true; }
+    if (++loaded === N) { window.__ok = true; document.getElementById("loading").hidden = true; refreshHi(); }
+  });
 });
+function refreshHi() {
+  const keep = MOBILE ? 2 : 4;
+  const want = new Set();
+  for (let k = current - 1; want.size < keep && k <= N; k++) if (k >= 0 && k < N) want.add(k);
+  pageMats.forEach((mat, i) => {
+    if (want.has(i) && !hiState[i]) {
+      hiState[i] = "loading";
+      makeTex(PAGES[i], t => {
+        if (hiState[i] !== "loading") { t.dispose(); return; }
+        hiState[i] = t; mat.map = t; mat.needsUpdate = true;
+      });
+    } else if (!want.has(i) && hiState[i]) {
+      if (hiState[i] !== "loading") { hiState[i].dispose(); }
+      hiState[i] = null;
+      if (mat.userData.lo) { mat.map = mat.userData.lo; mat.needsUpdate = true; }
+    }
+  });
+}
 
 // Contracapa preta (polipropileno fosco), também vira para mostrar o verso
 {
@@ -381,7 +409,7 @@ function sync() {
   btn("next").disabled = btn("last").disabled = current === TOTAL;
   sheets.forEach((s, i) => { const t = i < current ? Math.PI : 0; if (s.target !== t) { s.dir = t > s.target ? 1 : -1; s.target = t; } });
 }
-function go(n) { current = Math.max(0, Math.min(TOTAL, n)); sync(); }
+function go(n) { current = Math.max(0, Math.min(TOTAL, n)); sync(); if (loaded === N) refreshHi(); }
 btn("next").onclick = () => go(current + 1);
 btn("prev").onclick = () => go(current - 1);
 btn("first").onclick = () => go(0);
